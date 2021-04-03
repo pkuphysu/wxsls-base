@@ -26,8 +26,7 @@ jobs:
           fi
       - name: Install serverless
         run: curl -o- -L https://slss.io/install | bash
-      - name: Deploy serverless base
-        timeout-minutes: 5
+      - name: Deploy serverless base components
         run: $HOME/.serverless/bin/sls deploy | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
         env:
           STAGE: ${{ steps.env.outputs.stage }}
