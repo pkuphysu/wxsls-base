@@ -12,12 +12,12 @@ jobs:
   deploy:
     name: deploy serverless
     runs-on: ubuntu-latest
+    if: ${{ ! contains(github.event.head_commit.message, '[skip-deploy]') }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
       - name: Determine env
         id: env
-        if: ${{ ! contains(github.event.head_commit.message, '[skip-deploy]') }}
         run: |
           if [ $GITHUB_REF == 'refs/heads/master' ]; then
             echo '::set-output name=stage::prod'
@@ -27,7 +27,9 @@ jobs:
       - name: Install serverless
         run: curl -o- -L https://slss.io/install | bash
       - name: Deploy serverless base components
-        run: $HOME/.serverless/bin/sls deploy | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
+        run: |
+          set -o pipefail
+          $HOME/.serverless/bin/sls deploy | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
         env:
           STAGE: ${{ steps.env.outputs.stage }}
           SERVERLESS_PLATFORM_VENDOR: tencent
