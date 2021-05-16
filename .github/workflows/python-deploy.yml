@@ -1,4 +1,4 @@
-name: Deploy Serverless
+name: Deploy Python Layer
 
 on:
   push:
@@ -6,17 +6,33 @@ on:
       - master
       - dev
     paths:
-      - db/serverless.yml
-      - vpc/serverless.yml
+      - python/serverless.yml
 
 jobs:
   deploy:
-    name: deploy serverless
+    name: deploy python layer
     runs-on: ubuntu-latest
     if: ${{ ! contains(github.event.head_commit.message, '[skip-deploy]') }}
+    container:
+      image: centos:7.7.1908
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+      - name: Install python
+        run: |
+          mkdir /opt/python
+          yum install -y yum-utils make wget
+          yum-builddep -y python
+          wget https://www.python.org/ftp/python/$VERSION/Python-$VERSION.tgz
+          tar zxfv Python-$VERSION.tgz
+          cd Python-$VERSION
+          ./configure --prefix=/opt/python
+          make
+          make altinstall
+        env:
+          VERSION: 3.9.5
+      - name: Pre-compile
+        run: python -c 'import sys; print(sys.version)'
       - name: Determine env
         id: env
         run: |
@@ -28,9 +44,10 @@ jobs:
       - name: Install serverless
         run: curl -o- -L https://slss.io/install | bash
       - name: Deploy serverless base components
+        shell: bash --noprofile --norc -eo pipefail {0}
         run: |
-          set -o pipefail
-          $HOME/.serverless/bin/sls deploy | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
+          # Force deploy to fix permission problem
+          $HOME/.serverless/bin/sls deploy --force | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
         env:
           STAGE: ${{ steps.env.outputs.stage }}
           SERVERLESS_PLATFORM_VENDOR: tencent
