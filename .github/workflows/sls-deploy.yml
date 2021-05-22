@@ -1,4 +1,4 @@
-name: Deploy Serverless
+name: Deploy Serverless Basic
 
 on:
   push:
@@ -31,7 +31,8 @@ jobs:
       - name: Deploy serverless base components
         run: |
           set -o pipefail
-          $HOME/.serverless/bin/sls deploy --target vpc --target db | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
+          $HOME/.serverless/bin/sls deploy --target vpc | grep -v -e '中 ' -e '化 ' -e NA -e password
+          $HOME/.serverless/bin/sls deploy --target db | grep -v -e '中 ' -e '化 ' -e NA -e password
         env:
           STAGE: ${{ steps.env.outputs.stage }}
           SERVERLESS_PLATFORM_VENDOR: tencent
