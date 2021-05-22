@@ -51,5 +51,6 @@ jobs:
         env:
           STAGE: ${{ steps.env.outputs.stage }}
           SERVERLESS_PLATFORM_VENDOR: tencent
+          SLS_GEO_LOCATION: cn
           TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
           TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
