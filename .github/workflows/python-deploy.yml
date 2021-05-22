@@ -48,7 +48,7 @@ jobs:
         shell: bash --noprofile --norc -eo pipefail {0}
         run: |
           # Force deploy to fix permission problem
-          $HOME/.serverless/bin/sls deploy --force | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
+          $HOME/.serverless/bin/sls deploy --force --target python | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
         env:
           STAGE: ${{ steps.env.outputs.stage }}
           SERVERLESS_PLATFORM_VENDOR: tencent
