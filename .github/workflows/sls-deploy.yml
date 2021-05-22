@@ -1,4 +1,4 @@
-name: Deploy Serverless
+name: Deploy Serverless Basic
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
     paths:
       - db/serverless.yml
       - vpc/serverless.yml
+      - .github/workflows/sls-deploy.yml
 
 jobs:
   deploy:
@@ -30,9 +31,11 @@ jobs:
       - name: Deploy serverless base components
         run: |
           set -o pipefail
-          $HOME/.serverless/bin/sls deploy | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
+          $HOME/.serverless/bin/sls deploy --target vpc | grep -v -e '中 ' -e '化 ' -e NA -e password
+          $HOME/.serverless/bin/sls deploy --target db | grep -v -e '中 ' -e '化 ' -e NA -e password
         env:
           STAGE: ${{ steps.env.outputs.stage }}
           SERVERLESS_PLATFORM_VENDOR: tencent
+          SLS_GEO_LOCATION: cn
           TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
           TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}

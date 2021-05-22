@@ -7,6 +7,7 @@ on:
       - dev
     paths:
       - python/serverless.yml
+      - .github/workflows/python-deploy.yml
 
 jobs:
   deploy:
@@ -47,9 +48,10 @@ jobs:
         shell: bash --noprofile --norc -eo pipefail {0}
         run: |
           # Force deploy to fix permission problem
-          $HOME/.serverless/bin/sls deploy --force | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
+          $HOME/.serverless/bin/sls deploy --force --target python | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
         env:
           STAGE: ${{ steps.env.outputs.stage }}
           SERVERLESS_PLATFORM_VENDOR: tencent
+          SLS_GEO_LOCATION: cn
           TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
           TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
