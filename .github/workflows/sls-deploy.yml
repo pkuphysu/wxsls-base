@@ -8,6 +8,7 @@ on:
     paths:
       - db/serverless.yml
       - vpc/serverless.yml
+      - .github/workflows/sls-deploy.yml
 
 jobs:
   deploy:
