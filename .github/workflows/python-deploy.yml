@@ -15,15 +15,35 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ ! contains(github.event.head_commit.message, '[skip-deploy]') }}
     container:
-      image: centos:7.7.1908
+      image: ubuntu:22.04
     steps:
+      - name: Install container tools
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            build-essential \
+            ca-certificates \
+            curl \
+            libbz2-dev \
+            libffi-dev \
+            liblzma-dev \
+            libncursesw5-dev \
+            libreadline-dev \
+            libsqlite3-dev \
+            libssl-dev \
+            tk-dev \
+            wget \
+            xz-utils \
+            zlib1g-dev
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
       - name: Install python
         run: |
-          mkdir /opt/python
-          yum install -y yum-utils make wget
-          yum-builddep -y python
+          mkdir -p /opt/python
           wget https://www.python.org/ftp/python/$VERSION/Python-$VERSION.tgz
           tar zxfv Python-$VERSION.tgz
           cd Python-$VERSION
@@ -33,25 +53,24 @@ jobs:
         env:
           VERSION: 3.9.5
       - name: Pre-compile
-        run: python -c 'import sys; print(sys.version)'
+        run: /opt/python/bin/python3.9 -c 'import sys; print(sys.version)'
       - name: Determine env
         id: env
         run: |
           if [ $GITHUB_REF == 'refs/heads/master' ]; then
-            echo '::set-output name=stage::prod'
+            echo 'stage=prod' >> "$GITHUB_OUTPUT"
           else
-            echo '::set-output name=stage::dev'
+            echo 'stage=dev' >> "$GITHUB_OUTPUT"
           fi
       - name: Install serverless
-        run: curl -o- -L https://slss.io/install | bash
+        run: npm install -g serverless-cloud-framework
       - name: Deploy serverless base components
         shell: bash --noprofile --norc -eo pipefail {0}
         run: |
           # Force deploy to fix permission problem
-          $HOME/.serverless/bin/sls deploy --force --target python | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
+          scf deploy --force --target python | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
         env:
           STAGE: ${{ steps.env.outputs.stage }}
           SERVERLESS_PLATFORM_VENDOR: tencent
-          SLS_GEO_LOCATION: cn
           TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
           TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
