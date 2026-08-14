@@ -14,44 +14,30 @@ jobs:
     name: deploy python layer
     runs-on: ubuntu-latest
     if: ${{ ! contains(github.event.head_commit.message, '[skip-deploy]') }}
-    container:
-      image: ubuntu:22.04
     steps:
-      - name: Install container tools
-        run: |
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y \
-            build-essential \
-            ca-certificates \
-            curl \
-            libbz2-dev \
-            libffi-dev \
-            liblzma-dev \
-            libncursesw5-dev \
-            libreadline-dev \
-            libsqlite3-dev \
-            libssl-dev \
-            tk-dev \
-            wget \
-            xz-utils \
-            zlib1g-dev
-      - name: Set up Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: "22"
       - name: Checkout code
-        uses: actions/checkout@v6
-      - name: Install python
+        uses: actions/checkout@v4
+      - name: Build Python layer for the target runtime
         run: |
-          mkdir -p /opt/python
-          wget https://www.python.org/ftp/python/$VERSION/Python-$VERSION.tgz
-          tar zxfv Python-$VERSION.tgz
-          cd Python-$VERSION
-          ./configure --prefix=/opt/python
-          make
-          make altinstall
-        env:
-          VERSION: 3.9.5
+          docker run --rm \
+            -v /opt:/opt \
+            -e VERSION=3.9.5 \
+            centos:7.7.1908 \
+            bash -c '
+              sed -i \
+                -e "s|^mirrorlist=|#mirrorlist=|g" \
+                -e "s|^#baseurl=http://mirror.centos.org/centos/\$releasever|baseurl=http://vault.centos.org/7.9.2009|g" \
+                /etc/yum.repos.d/CentOS-*.repo &&
+              yum install -y yum-utils make gcc gcc-c++ wget tar \
+                bzip2-devel libffi-devel openssl-devel readline-devel \
+                sqlite-devel tk-devel xz-devel zlib-devel &&
+              wget https://www.python.org/ftp/python/$VERSION/Python-$VERSION.tgz &&
+              tar zxfv Python-$VERSION.tgz &&
+              cd Python-$VERSION &&
+              ./configure --prefix=/opt/python &&
+              make -j"$(nproc)" &&
+              make altinstall
+            '
       - name: Pre-compile
         run: /opt/python/bin/python3.9 -c 'import sys; print(sys.version)'
       - name: Determine env
