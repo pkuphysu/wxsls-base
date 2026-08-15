@@ -6,7 +6,7 @@ inputs:
   region: ap-shanghai
   zone: ap-shanghai-2
   src:
-    src: /opt
+    src: ../python-layer
     exclude:
       - '**/test'
       - '**/config-3.9-x86_64-linux-gnu'
