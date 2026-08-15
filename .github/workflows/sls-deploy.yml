@@ -17,25 +17,24 @@ jobs:
     if: ${{ ! contains(github.event.head_commit.message, '[skip-deploy]') }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
       - name: Determine env
         id: env
         run: |
           if [ $GITHUB_REF == 'refs/heads/master' ]; then
-            echo '::set-output name=stage::prod'
+            echo 'stage=prod' >> "$GITHUB_OUTPUT"
           else
-            echo '::set-output name=stage::dev'
+            echo 'stage=dev' >> "$GITHUB_OUTPUT"
           fi
       - name: Install serverless
-        run: curl -o- -L https://slss.io/install | bash
+        run: npm install -g serverless-cloud-framework
       - name: Deploy serverless base components
         run: |
           set -o pipefail
-          $HOME/.serverless/bin/sls deploy --target vpc | grep -v -e '中 ' -e '化 ' -e NA -e password
-          $HOME/.serverless/bin/sls deploy --target db | grep -v -e '中 ' -e '化 ' -e NA -e password
+          scf deploy --target vpc | grep -v -e '中 ' -e '化 ' -e NA -e password
+          scf deploy --target db | grep -v -e '中 ' -e '化 ' -e NA -e password
         env:
           STAGE: ${{ steps.env.outputs.stage }}
           SERVERLESS_PLATFORM_VENDOR: tencent
-          SLS_GEO_LOCATION: cn
           TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
           TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}

@@ -14,44 +14,53 @@ jobs:
     name: deploy python layer
     runs-on: ubuntu-latest
     if: ${{ ! contains(github.event.head_commit.message, '[skip-deploy]') }}
-    container:
-      image: centos:7.7.1908
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Install python
+        uses: actions/checkout@v4
+      - name: Build Python layer for the target runtime
         run: |
-          mkdir /opt/python
-          yum install -y yum-utils make wget
-          yum-builddep -y python
-          wget https://www.python.org/ftp/python/$VERSION/Python-$VERSION.tgz
-          tar zxfv Python-$VERSION.tgz
-          cd Python-$VERSION
-          ./configure --prefix=/opt/python
-          make
-          make altinstall
-        env:
-          VERSION: 3.9.5
+          mkdir -p python-layer
+
+          docker run --rm \
+            -v "${PWD}/python-layer:/opt" \
+            -e VERSION=3.9.5 \
+            centos:7.7.1908 \
+            bash -c '
+              sed -i \
+                -e "s|^mirrorlist=|#mirrorlist=|g" \
+                -e "s|^#baseurl=http://mirror.centos.org/centos/\$releasever|baseurl=http://vault.centos.org/7.9.2009|g" \
+                /etc/yum.repos.d/CentOS-*.repo &&
+              yum install -y yum-utils make gcc gcc-c++ wget tar \
+                bzip2-devel libffi-devel openssl-devel readline-devel \
+                sqlite-devel tk-devel xz-devel zlib-devel &&
+              wget https://www.python.org/ftp/python/$VERSION/Python-$VERSION.tgz &&
+              tar zxfv Python-$VERSION.tgz &&
+              cd Python-$VERSION &&
+              ./configure --prefix=/opt/python &&
+              make -j"$(nproc)" &&
+              make altinstall
+            '
       - name: Pre-compile
-        run: python -c 'import sys; print(sys.version)'
+        run: |
+          python-layer/python/bin/python3.9 -c "import sys; print(sys.version)"
+          ldd python-layer/python/bin/python3.9 | grep libc
       - name: Determine env
         id: env
         run: |
           if [ $GITHUB_REF == 'refs/heads/master' ]; then
-            echo '::set-output name=stage::prod'
+            echo 'stage=prod' >> "$GITHUB_OUTPUT"
           else
-            echo '::set-output name=stage::dev'
+            echo 'stage=dev' >> "$GITHUB_OUTPUT"
           fi
       - name: Install serverless
-        run: curl -o- -L https://slss.io/install | bash
+        run: npm install -g serverless-cloud-framework
       - name: Deploy serverless base components
         shell: bash --noprofile --norc -eo pipefail {0}
         run: |
           # Force deploy to fix permission problem
-          $HOME/.serverless/bin/sls deploy --force --target python | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
+          scf deploy --force --target python | grep -v -e Initializing -e Uploading -e Deploying -e NA -e password
         env:
           STAGE: ${{ steps.env.outputs.stage }}
           SERVERLESS_PLATFORM_VENDOR: tencent
-          SLS_GEO_LOCATION: cn
           TENCENT_SECRET_ID: ${{ secrets.TENCENT_SECRET_ID }}
           TENCENT_SECRET_KEY: ${{ secrets.TENCENT_SECRET_KEY }}
