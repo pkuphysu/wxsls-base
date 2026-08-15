@@ -14,3 +14,7 @@
 ## 为什么不用 MySQL 呢？
 
 太贵了，闲时也须付费。
+
+## 为什么不用 PostgreSQL 了？
+腾讯云砍掉了 serverless 的 PostgreSQL，现在只能用 cynosdb (约等于 MySQL)
+
